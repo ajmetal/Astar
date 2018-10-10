@@ -26,7 +26,6 @@ SMALL_WIDTH, SMALL_HEIGHT = small_image.width(), small_image.height()
 canvas = tkinter.Canvas(master, width=SMALL_WIDTH, height=SMALL_HEIGHT)
 canvas.pack()
 
-
 def shrink(values):
     return [v/SUBSAMPLE for v in values]
 
@@ -34,7 +33,6 @@ source_point = None
 destination_point = None
 visited_boxes = []
 path = []
-
 
 def redraw():
 
@@ -48,16 +46,15 @@ def redraw():
     for segment in path:
         x1,y1 = shrink(segment[0])
         x2,y2 = shrink(segment[1])
-        canvas.create_line(y1, x1, y2, x2, width = 2.0, fill='red')
+        canvas.create_line(y1, x1, y2, x2, width = 2.0, fill = 'red')
 
     if source_point:
         x,y = shrink(source_point)
-        canvas.create_oval(y - 5, x - 5, y + 5, x + 5, width = 2, outline='red')
+        canvas.create_oval(y - 5, x - 5, y + 5, x + 5, width = 2, outline = 'red')
 
     if destination_point:
         x,y = shrink(destination_point)
-        canvas.create_oval(y - 5, x - 5, y + 5, x + 5, width = 2, outline='red')
-
+        canvas.create_oval(y - 5, x - 5, y + 5, x + 5, width = 2, outline = 'red')
 
 def on_click(event):
 
@@ -76,6 +73,7 @@ def on_click(event):
         destination_point = event.y * SUBSAMPLE, event.x * SUBSAMPLE
         try:
             path, visited_boxes = p2_pathfinder.find_path(source_point, destination_point, mesh)
+            #print(path)
 
         except:
             destination_point = None

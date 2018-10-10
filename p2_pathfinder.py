@@ -18,37 +18,22 @@ def find_path (source_point, destination_point, mesh):
     """
     print("src, dst: ", source_point, destination_point)
 
-    def getBox(point):
+    #print(mesh)
+
+    #finds the box in the mesh containing the given point
+    def get_box(point):
         for box in mesh['boxes']:
-            if point[0] >= box[0] and point[0] <= box[1] and point[1] >= box[2] and point[1] <= box[3]:
+            if point[0] >= box[0] and point[0] < box[1] and point[1] >= box[2] and point[1] < box[3]:
                 return box
         print("point not in any box! ", point)
         return None
 
+    source_box = get_box(source_point)
+    destination_box = get_box(destination_point)
 
-    #step 1: find which boxes in mesh contain the source and destination
-    source_box = getBox(source_point)
-    destination_box = getBox(destination_point)
-    
-    print(source_box, destination_box)
-
-    #need to redefine the adjacency function to work on a mesh
-    def adj(graph, current):
-        current_box = getBox(current)
-        
-        adjBoxes = graph['adj'][current_box]
-        
-        ret = []
-        for box in adjBoxes:
-            midpoint = ( floor((box[0] + box[1]) / 2), floor((box[2] + box[3]) / 2) )
-            ret.append( ( midpoint, get_distance(midpoint, current)) )
-        return ret
-
-    def get_distance(goal, next):
-        #(x1, x2, y1, y2)
-        #(x1, y1) = top-left
-        #(x2, y2) = bottom-right
-        return abs(goal[0] - next[0]) + abs(goal[1] - next[1])
+    #early return if the points are in the same box
+    if source_box is destination_box:
+        return [(source_point, destination_point)], [source_box]
 
     # The priority queue
     queue = [(0, source_point)]
@@ -61,40 +46,92 @@ def find_path (source_point, destination_point, mesh):
     backpointers = {}
     backpointers[source_point] = None
 
+    #map to allow quicker lookup of visited boxes
+    point_box_map = { source_point : source_box }
+
+    #return values
     path = []
-    boxes = []
+    visited_boxes = []
 
-    while queue:
-        current_dist, current_node = heappop(queue)
+    #calculates eucilidean distance between two points
+    def get_distance(a, b):
+        return sqrt( (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 )
 
-        # Check if current node is the destination_point
-        if getBox(current_node) == getBox(destination_point):
+    def clamp(val, lower, upper): return max( min( val, upper), lower )
 
-            # List containing all cells from source_point to destination_point
+    #got this off of stack overflow
+    #def line_intersection(line1, line2):
+    #    xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
+    #    ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
+
+    #    def det(a, b):
+    #        return a[0] * b[1] - a[1] * b[0]
+
+    #    div = det(xdiff, ydiff)
+    #    if div == 0:
+    #       return None
+
+    #    d = (det(*line1), det(*line2))
+    #    x = det(d, xdiff) / div
+    #    y = det(d, ydiff) / div
+    #    return x, y
+
+    def adj(graph, current):       
+        adj_list = []
+
+        #if destination_box in graph['adj'][get_box(current)]:
+        #    closest_point = ( clamp(current[0], destination_box[0], destination_box[1]), clamp(current[1], destination_box[2], destination_box[3]) )    
+        #    #midpoint
+        #    #closest_point = ( (box[0] + box[1]) / 2, (box[2] + box[3]) / 2 )
+        #    point_box_map[closest_point] = destination_box
+        #    adj_list.append( ( closest_point, get_distance(current, closest_point) ) )
+        #    return adj_list
+
+        for box in graph['adj'][ get_box(current) ]:
+            #constrained point
+            closest_point = ( clamp(current[0], box[0], box[1]), clamp(current[1], box[2], box[3]) )
             
+            #midpoint
+            #closest_point = ( (box[0] + box[1]) / 2, (box[2] + box[3]) / 2 )
 
-            # Go backwards from destination_point until the source using backpointers
-            # and add all the nodes in the shortest path into a list
-            current_back_node = backpointers[current_node]
-            path = [(current_node, current_back_node)]
-            while current_back_node is not None:
-                path.append((current_back_node, backpointers[current_back_node]))
-                current_back_node = backpointers[current_back_node]
-                
+            point_box_map[closest_point] = box
+            
+            adj_list.append( ( closest_point, get_distance(current, closest_point) ) )
+        return adj_list
+
+    #perform a*
+    while queue:
+        current_dist, current_point = heappop(queue)
+        current_dist = distances[current_point]
+
+        if point_box_map[current_point] == destination_box:
+            #construct path
+            prev_point = backpointers[current_point]
+            path = [(destination_point, current_point), (current_point, prev_point)]
+            while prev_point is not None:
+                path.append( (prev_point, backpointers[prev_point]) )
+                prev_point = backpointers[prev_point]
+            
             path = path[:-1]
-            break
+            return path, visited_boxes
 
         # Calculate cost from current node to all the adjacent ones
-        for adj_node, adj_node_cost in adj(mesh, current_node):
-            pathcost = current_dist + adj_node_cost
+        for adj_point, adj_point_cost in adj(mesh, current_point):
+            pathcost = current_dist + adj_point_cost
 
-            # If the cost is new
-            if adj_node not in distances or pathcost < distances[adj_node]:
-                distances[adj_node] = pathcost
-                backpointers[adj_node] = current_node
-                boxes.append(getBox(adj_node))
-                priority = pathcost + get_distance(destination_point, adj_node)
-                heappush(queue, (priority, adj_node))
+            # If the cost is new or less
+            if adj_point not in distances or pathcost < distances[adj_point]:
+                distances[adj_point] = pathcost
+                backpointers[adj_point] = current_point
+                visited_boxes.append(point_box_map[adj_point])
+                priority = pathcost + get_distance(adj_point, destination_point)
+                heappush(queue, (priority, adj_point))
 
-    print('path: ', path)
-    return path, boxes
+    #print('point_box_map: ', point_box_map)
+    #print('distances: ', distances)
+    #print(visited_boxes)
+    #print('backpointers: ', backpointers)
+    #print('path: ', path)
+    print("No path found!")
+    #print(point_box_map)
+    return path, visited_boxes
