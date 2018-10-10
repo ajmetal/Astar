@@ -18,12 +18,10 @@ def find_path (source_point, destination_point, mesh):
     """
     print("src, dst: ", source_point, destination_point)
 
-    #print(mesh)
-
     #finds the box in the mesh containing the given point
     def get_box(point):
         for box in mesh['boxes']:
-            if point[0] >= box[0] and point[0] < box[1] and point[1] >= box[2] and point[1] < box[3]:
+            if point[0] >= box[0] and point[0] <= box[1] and point[1] >= box[2] and point[1] <= box[3]:
                 return box
         print("point not in any box! ", point)
         return None
@@ -59,40 +57,14 @@ def find_path (source_point, destination_point, mesh):
 
     def clamp(val, lower, upper): return max( min( val, upper), lower )
 
-    #got this off of stack overflow
-    #def line_intersection(line1, line2):
-    #    xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
-    #    ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
-
-    #    def det(a, b):
-    #        return a[0] * b[1] - a[1] * b[0]
-
-    #    div = det(xdiff, ydiff)
-    #    if div == 0:
-    #       return None
-
-    #    d = (det(*line1), det(*line2))
-    #    x = det(d, xdiff) / div
-    #    y = det(d, ydiff) / div
-    #    return x, y
-
     def adj(graph, current):       
         adj_list = []
 
-        #if destination_box in graph['adj'][get_box(current)]:
-        #    closest_point = ( clamp(current[0], destination_box[0], destination_box[1]), clamp(current[1], destination_box[2], destination_box[3]) )    
-        #    #midpoint
-        #    #closest_point = ( (box[0] + box[1]) / 2, (box[2] + box[3]) / 2 )
-        #    point_box_map[closest_point] = destination_box
-        #    adj_list.append( ( closest_point, get_distance(current, closest_point) ) )
-        #    return adj_list
-
-        for box in graph['adj'][ get_box(current) ]:
+        for box in graph['adj'][ point_box_map[current] ]:
             #constrained point
             closest_point = ( clamp(current[0], box[0], box[1]), clamp(current[1], box[2], box[3]) )
-            
             #midpoint
-            #closest_point = ( (box[0] + box[1]) / 2, (box[2] + box[3]) / 2 )
+            #midpoint = ( (box[0] + box[1]) / 2, (box[2] + box[3]) / 2 )
 
             point_box_map[closest_point] = box
             
@@ -127,11 +99,5 @@ def find_path (source_point, destination_point, mesh):
                 priority = pathcost + get_distance(adj_point, destination_point)
                 heappush(queue, (priority, adj_point))
 
-    #print('point_box_map: ', point_box_map)
-    #print('distances: ', distances)
-    #print(visited_boxes)
-    #print('backpointers: ', backpointers)
-    #print('path: ', path)
     print("No path found!")
-    #print(point_box_map)
     return path, visited_boxes
