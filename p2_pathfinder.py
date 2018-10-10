@@ -34,15 +34,22 @@ def find_path (source_point, destination_point, mesh):
         return [(source_point, destination_point)], [source_box]
 
     # The priority queue
-    queue = [(0, source_point)]
+    queue = [(0, source_point, 'destination'), (0, destination_point, 'source')]
 
     # The dictionary that will be returned with the costs
-    distances = {}
-    distances[source_point] = 0
+    forward_distances = {}
+    forward_distances[source_point] = 0
+
+    backward_distances = {}
+    backward_distances[destination_point] = 0
 
     # The dictionary that will store the backpointers
-    backpointers = {}
-    backpointers[source_point] = None
+    forward_prev = {}
+    forward_prev[source_point] = None
+
+    backward_prev = {}
+    backward_prev[destination_point] = None
+
 
     #map to allow quicker lookup of visited boxes
     point_box_map = { source_point : source_box }
@@ -73,10 +80,19 @@ def find_path (source_point, destination_point, mesh):
 
     #perform a*
     while queue:
-        current_dist, current_point = heappop(queue)
+        current_dist, current_point, current_goal = heappop(queue)
+
+        if current_goal == 'source':
+            distances = backward_distances
+            backpointers = backward_prev
+        else:
+            backpointers = forward_prev
+            distances = forward_distances
+
         current_dist = distances[current_point]
 
-        if point_box_map[current_point] == destination_box:
+        #need to check is the current box has been visited by a point from the other direction
+        if point_box_map[current_point] == point_box_map[]:
             #construct path
             prev_point = backpointers[current_point]
             path = [(destination_point, current_point), (current_point, prev_point)]
@@ -96,8 +112,18 @@ def find_path (source_point, destination_point, mesh):
                 distances[adj_point] = pathcost
                 backpointers[adj_point] = current_point
                 visited_boxes.append(point_box_map[adj_point])
-                priority = pathcost + get_distance(adj_point, destination_point)
-                heappush(queue, (priority, adj_point))
+                if current_goal == 'source':
+                    priority = pathcost + get_distance(adj_point, source_point)
+                else:
+                    priority = pathcost + get_distance(adj_point, destination_point)
+                heappush(queue, (priority, adj_point, current_goal))
+
+        if current_goal == 'source':
+            backward_distances = distances
+            backward_prev = backpointers
+        else:
+            forward_prev =  backpointers
+            forward_distances = distances
 
     print("No path found!")
     return path, visited_boxes
