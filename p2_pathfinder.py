@@ -21,7 +21,7 @@ def find_path (source_point, destination_point, mesh):
     #finds the box in the mesh containing the given point
     def get_box(point):
         for box in mesh['boxes']:
-            if point[0] >= box[0] and point[0] <= box[1] and point[1] >= box[2] and point[1] <= box[3]:
+            if box[0] <= point[0] <= box[1] and box[2] <= point[1] <= box[3]:
                 return box
         print("point not in any box! ", point)
         return None
@@ -93,23 +93,21 @@ def find_path (source_point, destination_point, mesh):
 
         current_dist = distances[current_point]
 
-        #need to check is the current box has been visited by a point from the other direction
-        done = False
-        box =  point_box_map[current_point] 
-        for point in opposite_direction:
-            if  box[0] <= point[0] <= box[1]  and box[2] <= point[1] <= box[3]:
-                done = True
-                print(current_point)
-                break
-        if done:
-            #construct path
+        if current_point in backpointers and current_point in opposite_direction:
             prev_point = backpointers[current_point]
-            path = [(destination_point, current_point), (current_point, prev_point)]
-            while prev_point is not None:
+            path = [(current_point, prev_point)]
+            while prev_point is not None and backpointers[prev_point] is not None:
+                print(current_goal, prev_point)
                 path.append( (prev_point, backpointers[prev_point]) )
                 prev_point = backpointers[prev_point]
-            
-            path = path[:-1]
+                
+            prev_point = current_point
+            while prev_point is not None and opposite_direction[prev_point] is not None:
+                print("opposite goal", prev_point)
+                path.append( (prev_point, opposite_direction[prev_point]) )
+                prev_point = opposite_direction[prev_point]
+                
+            print(path)
             return path, visited_boxes
 
         # Calculate cost from current node to all the adjacent ones
@@ -128,8 +126,8 @@ def find_path (source_point, destination_point, mesh):
                 heappush(queue, (priority, adj_point, current_goal))
 
         if current_goal == 'source':
-            backward_distances = distances
             backward_prev = backpointers
+            backward_distances = distances
         else:
             forward_prev =  backpointers
             forward_distances = distances
