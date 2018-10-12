@@ -52,7 +52,7 @@ def find_path (source_point, destination_point, mesh):
 
 
     #map to allow quicker lookup of visited boxes
-    point_box_map = { source_point : source_box }
+    point_box_map = { source_point : source_box, destination_point : destination_box }
 
     #return values
     path = []
@@ -85,14 +85,23 @@ def find_path (source_point, destination_point, mesh):
         if current_goal == 'source':
             distances = backward_distances
             backpointers = backward_prev
+            opposite_direction = forward_prev
         else:
             backpointers = forward_prev
             distances = forward_distances
+            opposite_direction = backward_prev
 
         current_dist = distances[current_point]
 
         #need to check is the current box has been visited by a point from the other direction
-        if point_box_map[current_point] == point_box_map[]:
+        done = False
+        box =  point_box_map[current_point] 
+        for point in opposite_direction:
+            if  box[0] <= point[0] <= box[1]  and box[2] <= point[1] <= box[3]:
+                done = True
+                print(current_point)
+                break
+        if done:
             #construct path
             prev_point = backpointers[current_point]
             path = [(destination_point, current_point), (current_point, prev_point)]
